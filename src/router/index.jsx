@@ -18,6 +18,9 @@ import Profile from "../components/ui/Profile";
 import Checkout from "/src/pages/checkout/Checkout";
 import OrderConfirmation from "../pages/checkout/OrderConfirmation";
 
+// ✅ បន្ថែម Import Orders
+import Orders from "../pages/checkout/Orders"; // ឬ /src/pages/orders/Orders
+
 import Sidebar from "../pages/dashboard/Sidebar";
 import Overview from "../pages/dashboard/Overview";
 import Manage from "../pages/dashboard/Manage";
@@ -104,13 +107,19 @@ export default function Router() {
             <Route path="/service" element={<Service />} />
             <Route path="/about" element={<About />} />
 
-            {/* Cart & Checkout Routes */}
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/order-confirmation" element={<OrderConfirmation />} />
-
             {/* Protected Shop Routes - Require Login */}
             <Route element={<PrivateRoute />}>
+              {/* ✅ Profile - User Profile */}
               <Route path="/profile" element={<Profile />} />
+              
+              {/* ✅ Orders - User Order History */}
+              <Route path="/orders" element={<Orders />} />
+              
+              {/* ✅ Checkout - Require Login */}
+              <Route path="/checkout" element={<Checkout />} />
+              
+              {/* ✅ Order Confirmation - Require Login */}
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
             </Route>
           </Route>
 

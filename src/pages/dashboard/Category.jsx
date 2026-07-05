@@ -1,6 +1,93 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FaPlus, FaEdit, FaTrash, FaSync } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaSync, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
+
+// Modal Component
+const Modal = ({ isOpen, onClose, title, message, type = "info", onConfirm, confirmText = "Confirm", cancelText = "Cancel" }) => {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case "success":
+        return <FaCheckCircle className="text-5xl text-emerald-500" />;
+      case "error":
+        return <FaExclamationTriangle className="text-5xl text-red-500" />;
+      case "warning":
+        return <FaExclamationTriangle className="text-5xl text-yellow-500" />;
+      default:
+        return <FaExclamationTriangle className="text-5xl text-blue-500" />;
+    }
+  };
+
+  const getButtonColor = () => {
+    switch (type) {
+      case "success":
+        return "bg-emerald-500 hover:bg-emerald-600";
+      case "error":
+        return "bg-red-500 hover:bg-red-600";
+      case "warning":
+        return "bg-yellow-500 hover:bg-yellow-600";
+      default:
+        return "bg-blue-500 hover:bg-blue-600";
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-xl max-w-md w-full p-6 animate-fadeIn">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            {getIcon()}
+          </div>
+          
+          <h3 className="text-xl font-bold text-white mb-2">
+            {title}
+          </h3>
+          
+          <p className="text-slate-300 text-sm mb-6">
+            {message}
+          </p>
+          
+          <div className="flex gap-3 justify-center">
+            {onConfirm ? (
+              <>
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold transition text-sm"
+                >
+                  {cancelText}
+                </button>
+                <button
+                  onClick={() => {
+                    onConfirm();
+                    onClose();
+                  }}
+                  className={`px-4 py-2 ${getButtonColor()} rounded-xl font-semibold transition text-sm text-white`}
+                >
+                  {confirmText}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={onClose}
+                className={`px-6 py-2 ${getButtonColor()} rounded-xl font-semibold transition text-sm text-white`}
+              >
+                OK
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Category = () => {
   const [categories, setCategories] = useState([]);
@@ -18,7 +105,42 @@ const Category = () => {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Modal states
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+    onConfirm: null,
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+  });
+
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
   const getToken = () => localStorage.getItem("token");
+
+  // Show modal helper
+  const showModal = ({ title, message, type = "info", onConfirm = null, confirmText = "Confirm", cancelText = "Cancel" }) => {
+    setModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      confirmText,
+      cancelText,
+    });
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setModal({
+      ...modal,
+      isOpen: false,
+    });
+  };
 
   // Fetch categories
   useEffect(() => {
@@ -84,27 +206,46 @@ const Category = () => {
 
     const token = getToken();
     if (!token) {
-      alert("Please login again.");
+      showModal({
+        title: "Session Expired",
+        message: "Please login again.",
+        type: "error",
+      });
       return;
     }
 
     setSaving(true);
     setErrors({});
     try {
+      const payload = {
+        name: formData.name.trim(),
+        name_kh: formData.name_kh?.trim() || "",
+        is_active: Boolean(formData.is_active),
+        order: parseInt(formData.order) || 0,
+      };
+
       if (isEditing) {
         await axios.put(
           `http://localhost:8000/api/admin/categories/${editingId}`,
-          formData,
+          payload,
           { headers: { Authorization: `Bearer ${token}` } },
         );
-        alert("Category updated successfully!");
+        showModal({
+          title: "Success!",
+          message: "Category updated successfully!",
+          type: "success",
+        });
       } else {
         await axios.post(
           "http://localhost:8000/api/admin/categories",
-          formData,
+          payload,
           { headers: { Authorization: `Bearer ${token}` } },
         );
-        alert("Category added successfully!");
+        showModal({
+          title: "Success!",
+          message: "Category added successfully!",
+          type: "success",
+        });
       }
       resetForm();
       fetchCategories();
@@ -112,10 +253,23 @@ const Category = () => {
       console.error("Error saving category:", error);
       if (error.response?.status === 422) {
         setErrors(error.response.data.errors);
+        showModal({
+          title: "Validation Error",
+          message: "Please check the form for errors.",
+          type: "error",
+        });
       } else if (error.response?.status === 401) {
-        alert("Session expired. Please login again.");
+        showModal({
+          title: "Session Expired",
+          message: "Please login again.",
+          type: "error",
+        });
       } else {
-        alert("Failed to save category. Please try again.");
+        showModal({
+          title: "Error",
+          message: error.response?.data?.message || "Failed to save category. Please try again.",
+          type: "error",
+        });
       }
     } finally {
       setSaving(false);
@@ -135,38 +289,63 @@ const Category = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this category?"))
-      return;
+    // Show delete confirmation modal
+    setDeleteTarget(id);
+    showModal({
+      title: "Confirm Delete",
+      message: "Are you sure you want to delete this category? This action cannot be undone.",
+      type: "warning",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        const token = getToken();
+        if (!token) {
+          showModal({
+            title: "Session Expired",
+            message: "Please login again.",
+            type: "error",
+          });
+          return;
+        }
 
-    const token = getToken();
-    if (!token) {
-      alert("Please login again.");
-      return;
-    }
-
-    try {
-      await axios.delete(`http://localhost:8000/api/admin/categories/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert("Category deleted successfully!");
-      fetchCategories();
-    } catch (error) {
-      console.error("Error deleting category:", error);
-      if (error.response?.status === 422) {
-        alert(
-          error.response.data.message ||
-            "Cannot delete category with products.",
-        );
-      } else {
-        alert("Failed to delete category. Please try again.");
-      }
-    }
+        try {
+          await axios.delete(`http://localhost:8000/api/admin/categories/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          showModal({
+            title: "Success!",
+            message: "Category deleted successfully!",
+            type: "success",
+          });
+          fetchCategories();
+        } catch (error) {
+          console.error("Error deleting category:", error);
+          if (error.response?.status === 422) {
+            showModal({
+              title: "Cannot Delete",
+              message: error.response.data.message || "Cannot delete category with products.",
+              type: "error",
+            });
+          } else {
+            showModal({
+              title: "Error",
+              message: "Failed to delete category. Please try again.",
+              type: "error",
+            });
+          }
+        }
+      },
+    });
   };
 
   const handleToggleStatus = async (id, currentStatus) => {
     const token = getToken();
     if (!token) {
-      alert("Please login again.");
+      showModal({
+        title: "Session Expired",
+        message: "Please login again.",
+        type: "error",
+      });
       return;
     }
 
@@ -177,8 +356,17 @@ const Category = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchCategories();
+      showModal({
+        title: "Success!",
+        message: `Category ${!currentStatus ? "activated" : "deactivated"} successfully!`,
+        type: "success",
+      });
     } catch (error) {
-      alert("Failed to update status.");
+      showModal({
+        title: "Error",
+        message: "Failed to update status. Please try again.",
+        type: "error",
+      });
     }
   };
 
@@ -190,7 +378,7 @@ const Category = () => {
     setShowForm(false);
   };
 
-  // ✅ Sort categories by order
+  // Sort categories by order
   const sortedCategories = [...categories].sort(
     (a, b) => (a.order || 0) - (b.order || 0),
   );
@@ -425,6 +613,18 @@ const Category = () => {
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+        confirmText={modal.confirmText}
+        cancelText={modal.cancelText}
+      />
     </div>
   );
 };

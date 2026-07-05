@@ -430,24 +430,34 @@ export default function Manage() {
               )}
             </div>
 
-            <InputField
-              label="Price"
-              type="number"
-              step="0.01"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              placeholder="4.50"
-              required
-            />
-            <InputField
-              label="Stock"
-              type="number"
-              value={form.stock}
-              onChange={(e) => setForm({ ...form, stock: e.target.value })}
-              placeholder="10"
-            />
+            {/* ✅ Price - changed to text input */}
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">
+                Price <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                placeholder="4.50"
+                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3 text-white outline-none focus:border-emerald-500 placeholder:text-slate-500 transition"
+                required
+              />
+            </div>
 
-            {/* ✅ FIXED: Status Select */}
+            {/* ✅ Stock - changed to text input */}
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">Stock</label>
+              <input
+                type="text"
+                value={form.stock}
+                onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                placeholder="10"
+                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3 text-white outline-none focus:border-emerald-500 placeholder:text-slate-500 transition"
+              />
+            </div>
+
+            {/* Status Select */}
             <div>
               <label className="block text-sm text-slate-400 mb-2">
                 Status

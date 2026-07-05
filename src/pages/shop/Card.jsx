@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
-  FaStar,
   FaEye,
   FaTimes,
   FaArrowLeft,
   FaArrowRight,
+  FaShoppingCart,
+  FaCheck,
 } from "react-icons/fa";
 
 export default function Card() {
@@ -60,6 +61,7 @@ export default function Card() {
             item.is_available !== undefined ? item.is_available : true,
           stock: item.stock || 0,
           rating: item.rating || 4.5,
+          description: item.description || "",
         }));
         setFoods(formattedProducts);
       } else {
@@ -74,7 +76,9 @@ export default function Card() {
   };
 
   // ✅ Add to Cart using API
-  const handleAddToCart = async (item) => {
+  const handleAddToCart = async (item, e) => {
+    if (e) e.stopPropagation();
+
     const token = getToken();
     if (!token) {
       alert("Please login to add items to cart.");
@@ -124,11 +128,12 @@ export default function Card() {
   };
 
   // Handle Check Menu - Navigate to menu with product ID
-  const handleCheckMenu = (foodId) => {
+  const handleCheckMenu = (foodId, e) => {
+    if (e) e.stopPropagation();
     navigate(`/menu?product=${foodId}`);
   };
 
-  // Filter foods
+  // Filter foods - ផ្លាស់ទីមកខាងលើមុនពេលប្រើក្នុង useEffect
   const filteredFoods = foods.filter((food) => {
     const matchesTab = activeTab === "all" || food.category === activeTab;
     const matchesSearch =
@@ -137,7 +142,63 @@ export default function Card() {
     return matchesTab && matchesSearch && food.is_available !== false;
   });
 
-  // ... Modal functions (openModal, closeModal, prevImage, nextImage) ...
+  // Modal functions
+  const openModal = (food, index) => {
+    setSelectedFood(food);
+    setSelectedImage(food.image);
+    setCurrentIndex(index);
+    setIsModalOpen(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedFood(null);
+    setSelectedImage(null);
+    document.body.style.overflow = "auto";
+  };
+
+  const prevImage = (e) => {
+    e.stopPropagation();
+    if (currentIndex > 0) {
+      const newIndex = currentIndex - 1;
+      setCurrentIndex(newIndex);
+      setSelectedFood(filteredFoods[newIndex]);
+      setSelectedImage(filteredFoods[newIndex].image);
+    }
+  };
+
+  const nextImage = (e) => {
+    e.stopPropagation();
+    if (currentIndex < filteredFoods.length - 1) {
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
+      setSelectedFood(filteredFoods[newIndex]);
+      setSelectedImage(filteredFoods[newIndex].image);
+    }
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isModalOpen) return;
+      if (e.key === "Escape") closeModal();
+      if (e.key === "ArrowLeft" && currentIndex > 0) {
+        const newIndex = currentIndex - 1;
+        setCurrentIndex(newIndex);
+        setSelectedFood(filteredFoods[newIndex]);
+        setSelectedImage(filteredFoods[newIndex].image);
+      }
+      if (e.key === "ArrowRight" && currentIndex < filteredFoods.length - 1) {
+        const newIndex = currentIndex + 1;
+        setCurrentIndex(newIndex);
+        setSelectedFood(filteredFoods[newIndex]);
+        setSelectedImage(filteredFoods[newIndex].image);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen, currentIndex, filteredFoods]);
 
   if (loading) {
     return (
@@ -170,7 +231,160 @@ export default function Card() {
 
   return (
     <div className="w-full bg-slate-900 text-white py-8">
-      {/* ... Modal JSX ... */}
+      {/* Modal */}
+      {isModalOpen && selectedFood && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          onClick={closeModal}
+        >
+          <div
+            className="relative bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition"
+            >
+              <FaTimes className="text-xl" />
+            </button>
+
+            <div className="flex flex-col md:flex-row">
+              {/* Image Section */}
+              <div className="md:w-1/2 relative bg-slate-900 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none overflow-hidden">
+                <img
+                  src={selectedImage}
+                  alt={selectedFood.nameEn}
+                  className="w-full h-64 md:h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "https://via.placeholder.com/400x300?text=No+Image";
+                  }}
+                />
+
+                {/* Navigation Arrows */}
+                {filteredFoods.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className={`absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition ${
+                        currentIndex === 0
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                      disabled={currentIndex === 0}
+                    >
+                      <FaArrowLeft />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition ${
+                        currentIndex === filteredFoods.length - 1
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                      disabled={currentIndex === filteredFoods.length - 1}
+                    >
+                      <FaArrowRight />
+                    </button>
+                  </>
+                )}
+
+                {/* Counter */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-white">
+                  {currentIndex + 1} / {filteredFoods.length}
+                </div>
+              </div>
+
+              {/* Content Section */}
+              <div className="md:w-1/2 p-6 md:p-8 flex flex-col">
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-2xl md:text-3xl font-bold text-white">
+                        {selectedFood.nameKh}
+                      </h2>
+                      <p className="text-slate-400 text-sm mt-1">
+                        {selectedFood.nameEn}
+                      </p>
+                    </div>
+                    <span className="text-2xl font-bold text-emerald-400">
+                      ${selectedFood.price.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Rating */}
+                  <div className="flex items-center gap-2 mt-3">
+                    
+                    <span className="text-slate-400 text-sm">
+                      ({selectedFood.rating})
+                    </span>
+                  </div>
+
+                  {/* Category */}
+                  <div className="mt-3">
+                    <span className="inline-block px-3 py-1 bg-slate-700 rounded-full text-xs text-slate-300">
+                      {selectedFood.category}
+                    </span>
+                    {selectedFood.stock <= 0 && (
+                      <span className="inline-block ml-2 px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs">
+                        Out of Stock
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {selectedFood.description && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-semibold text-slate-300 mb-2">
+                        Description
+                      </h4>
+                      <p className="text-sm text-slate-400 leading-relaxed">
+                        {selectedFood.description}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-6 pt-6 border-t border-slate-700">
+                  <button
+                    onClick={(e) => handleCheckMenu(selectedFood.id, e)}
+                    className="flex-1 py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+                  >
+                    <FaEye />
+                    View Details
+                  </button>
+                  <button
+                    onClick={(e) => handleAddToCart(selectedFood, e)}
+                    disabled={selectedFood.stock <= 0}
+                    className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${
+                      addedItems[selectedFood.id]
+                        ? "bg-emerald-500 text-white"
+                        : selectedFood.stock <= 0
+                          ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/20"
+                    }`}
+                  >
+                    {addedItems[selectedFood.id] ? (
+                      <>
+                        <FaCheck /> Added!
+                      </>
+                    ) : selectedFood.stock <= 0 ? (
+                      "Out of Stock"
+                    ) : (
+                      <>
+                        <FaShoppingCart /> Add to Cart
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-[89%] mx-auto space-y-8">
         {/* Header Section */}
@@ -263,33 +477,16 @@ export default function Card() {
                         ${food.price.toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-400 font-medium">
+                    <p className="text-lg text-slate-3  00 font-medium">
                       {food.nameEn}
                     </p>
-                    <div className="flex items-center gap-1 text-yellow-400 text-xs">
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar
-                          key={i}
-                          className={
-                            i < Math.floor(food.rating)
-                              ? "text-yellow-400"
-                              : "text-slate-600"
-                          }
-                        />
-                      ))}
-                      <span className="text-slate-400 ml-1">
-                        ({food.rating})
-                      </span>
-                    </div>
+                    
                   </div>
 
-                  {/* ✅ Check Menu + Add to Cart */}
+                  {/* Action Buttons */}
                   <div className="flex gap-2 mt-4">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCheckMenu(food.id);
-                      }}
+                      onClick={(e) => handleCheckMenu(food.id, e)}
                       className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                     >
                       <FaEye className="text-sm" />
