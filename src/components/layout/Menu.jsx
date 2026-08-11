@@ -22,6 +22,7 @@ const Menu = () => {
     { id: "KHMER", label: "Khmer", emoji: "🇰🇭" },
     { id: "KOREA", label: "Korean", emoji: "🇰🇷" },
     { id: "JAPAN", label: "Japanese", emoji: "🇯🇵" },
+    { id: "AMERICAN", label:"American",emoji: "🇺🇸" },
     { id: "DRINK", label: "Drinks", emoji: "🥤" },
   ]);
 

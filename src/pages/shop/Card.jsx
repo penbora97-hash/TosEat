@@ -32,6 +32,7 @@ export default function Card() {
     { id: "KHMER", name: "KHMER", icon: "🇰🇭" },
     { id: "KOREA", name: "KOREA", icon: "🇰🇷" },
     { id: "JAPAN", name: "JAPAN", icon: "🇯🇵" },
+    { id: "AMERICAN", name: "AMERICAN", icon: "🇺🇸" },
     { id: "DRINK", name: "DRINK", icon: "🥤" },
   ];
 
@@ -316,7 +317,6 @@ export default function Card() {
 
                   {/* Rating */}
                   <div className="flex items-center gap-2 mt-3">
-                    
                     <span className="text-slate-400 text-sm">
                       ({selectedFood.rating})
                     </span>
@@ -480,7 +480,6 @@ export default function Card() {
                     <p className="text-lg text-slate-3  00 font-medium">
                       {food.nameEn}
                     </p>
-                    
                   </div>
 
                   {/* Action Buttons */}
