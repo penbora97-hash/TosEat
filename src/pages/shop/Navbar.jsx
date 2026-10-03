@@ -5,7 +5,7 @@ import { FaCartShopping } from "react-icons/fa6";
 import { CgProfile } from "react-icons/cg";
 import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { FiClock, FiLogOut } from "react-icons/fi";
-import axios from "axios";
+import api, { getStorageUrl } from "../../api/axios";
 import LoginModal from "/src/pages/auth/Login";
 import RegisterModal from "/src/pages/auth/Register";
 import SignupPopup from "/src/pages/auth/SignupPopup";
@@ -27,28 +27,22 @@ export default function Navbar() {
 
   // Load cart count from API
   const loadCartCount = async () => {
-    const token = getToken();
+    const token = localStorage.getItem("token");
     if (!token) {
       setCartCount(0);
       return;
     }
 
     try {
-      const response = await axios.get("http://localhost:8000/api/cart/count", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get("/cart/count");
       if (response.data.status === "success") {
         setCartCount(response.data.data.count || 0);
       }
     } catch (error) {
       console.error("Error loading cart count:", error);
-      // Fallback: try to get from cart API
+      // Fallback: count items from cart
       try {
-        const cartResponse = await axios.get("http://localhost:8000/api/cart", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const cartResponse = await api.get("/cart");
         if (cartResponse.data.status === "success") {
           const items = cartResponse.data.data.items || [];
           const total = items.reduce(
@@ -91,22 +85,7 @@ export default function Navbar() {
     if (profile) {
       try {
         const parsed = JSON.parse(profile);
-        if (parsed.avatar_url) {
-          let avatar = parsed.avatar_url;
-          if (avatar.startsWith("http")) {
-            setProfileAvatar(avatar);
-          } else if (avatar.startsWith("/storage/")) {
-            setProfileAvatar(`http://localhost:8000${avatar}`);
-          } else if (avatar.startsWith("storage/")) {
-            setProfileAvatar(`http://localhost:8000/${avatar}`);
-          } else if (avatar.startsWith("avatars/")) {
-            setProfileAvatar(`http://localhost:8000/storage/${avatar}`);
-          } else {
-            setProfileAvatar(`http://localhost:8000/storage/${avatar}`);
-          }
-        } else {
-          setProfileAvatar(null);
-        }
+        setProfileAvatar(getStorageUrl(parsed.avatar_url));
       } catch (e) {
         setProfileAvatar(null);
       }

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api, { getStorageUrl } from "../../api/axios"; // ✅ central axios
 import {
   FaUserEdit,
   FaSignOutAlt,
@@ -68,26 +68,6 @@ export default function Profile() {
     setModal({ isOpen: false, type: "", title: "", message: "" });
   };
 
-  const fixAvatarUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("http")) {
-      if (url.includes("localhost:8080")) {
-        return url.replace("localhost:8080", "localhost:8000");
-      }
-      return url;
-    }
-    if (url.startsWith("/storage/")) {
-      return `http://localhost:8000${url}`;
-    }
-    if (url.startsWith("storage/")) {
-      return `http://localhost:8000/${url}`;
-    }
-    if (url.startsWith("avatars/")) {
-      return `http://localhost:8000/storage/${url}`;
-    }
-    return `http://localhost:8000/storage/${url}`;
-  };
-
   // Load profile from localStorage
   useEffect(() => {
     const loadLocalData = () => {
@@ -136,9 +116,8 @@ export default function Profile() {
 
     const fetchProfile = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // ✅ FIXED: api instance, no headers, no localhost
+        const response = await api.get("/user");
 
         if (response.data.status === "success") {
           const user = response.data.data;
@@ -179,9 +158,8 @@ export default function Profile() {
 
     setOrdersLoading(true);
     try {
-      const response = await axios.get("http://localhost:8000/api/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ FIXED: api instance
+      const response = await api.get("/orders");
 
       if (response.data.status === "success") {
         const ordersData = response.data.data.data || response.data.data || [];
@@ -192,12 +170,8 @@ export default function Profile() {
       console.error("Error fetching orders:", error);
       // Fallback to admin orders if user orders not available
       try {
-        const response2 = await axios.get(
-          "http://localhost:8000/api/admin/orders",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        // ✅ FIXED: api instance
+        const response2 = await api.get("/admin/orders");
         if (response2.data.status === "success") {
           const allOrders =
             response2.data.data.data || response2.data.data || [];
@@ -248,7 +222,8 @@ export default function Profile() {
       }
       return null;
     }
-    return fixAvatarUrl(avatar);
+    // ✅ FIXED: use getStorageUrl helper
+    return getStorageUrl(avatar);
   };
 
   const handleAvatarChange = async (e) => {
@@ -262,16 +237,10 @@ export default function Profile() {
     formData.append("avatar", file);
 
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/profile/avatar",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
+      // ✅ FIXED: api instance, no Authorization header (interceptor adds it)
+      const response = await api.post("/profile/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       if (response.data.status === "success") {
         let avatarUrl =
@@ -304,6 +273,8 @@ export default function Profile() {
           localStorage.setItem("user", JSON.stringify(user));
         }
 
+        window.dispatchEvent(new Event("profileUpdated"));
+
         showModal("success", "Success", "Avatar updated successfully!");
       }
     } catch (error) {
@@ -318,21 +289,13 @@ export default function Profile() {
 
     setSaving(true);
     try {
-      const response = await axios.put(
-        "http://localhost:8000/api/profile",
-        {
-          full_name: form.full_name,
-          phone: form.phone,
-          address: form.address,
-          bio: form.bio,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ FIXED: api instance, no headers
+      const response = await api.put("/profile", {
+        full_name: form.full_name,
+        phone: form.phone,
+        address: form.address,
+        bio: form.bio,
+      });
 
       if (response.data.status === "success") {
         const updatedUser = response.data.data;
@@ -359,6 +322,8 @@ export default function Profile() {
           avatar_url: form.avatar_url || updatedUser.avatar_url,
         };
         localStorage.setItem("user", JSON.stringify(userData));
+
+        window.dispatchEvent(new Event("profileUpdated"));
 
         showModal("success", "Success", "Profile updated successfully!");
         setEditing(false);
@@ -397,10 +362,11 @@ export default function Profile() {
     localStorage.removeItem("user");
     localStorage.removeItem("userProfile");
     window.dispatchEvent(new Event("loginStatusChanged"));
+    window.dispatchEvent(new Event("authChange"));
     navigate("/");
   };
 
-  // ✅ Get Status Badge - Improved
+  // ✅ Get Status Badge
   const getStatusBadge = (status) => {
     const statusMap = {
       pending: {
@@ -767,7 +733,7 @@ export default function Profile() {
               )}
             </div>
 
-            {/* ✅ Order History - Improved */}
+            {/* ✅ Order History */}
             <div className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
               <button
                 onClick={() =>

@@ -9,7 +9,7 @@ import {
   FiUser,
   FiPhone,
 } from "react-icons/fi";
-import axios from "axios";
+import api from "../../api/axios";
 
 const Register = ({ isOpen, onClose, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -55,7 +55,7 @@ const Register = ({ isOpen, onClose, onSwitchToLogin }) => {
     setErrors({});
 
     try {
-      const response = await axios.post("http://localhost:8000/api/register", {
+      const response = await api.post("/register", {
         full_name: formData.full_name,
         email: formData.email,
         phone: formData.phone,

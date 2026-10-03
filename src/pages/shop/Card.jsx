@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ changed from axios
 import {
   FaEye,
   FaTimes,
@@ -44,7 +44,8 @@ export default function Card() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:8000/api/products");
+      // ✅ FIXED: use api instance
+      const response = await api.get("/products");
       console.log("Products Response:", response.data);
 
       if (response.data.status === "success") {
@@ -93,19 +94,11 @@ export default function Card() {
     }
 
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/cart",
-        {
-          product_id: item.id,
-          quantity: 1,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ FIXED: use api instance, no headers, no localhost
+      const response = await api.post("/cart", {
+        product_id: item.id,
+        quantity: 1,
+      });
 
       if (response.data.status === "success") {
         setAddedItems((prev) => ({ ...prev, [item.id]: true }));
@@ -134,7 +127,7 @@ export default function Card() {
     navigate(`/menu?product=${foodId}`);
   };
 
-  // Filter foods - ផ្លាស់ទីមកខាងលើមុនពេលប្រើក្នុង useEffect
+  // Filter foods
   const filteredFoods = foods.filter((food) => {
     const matchesTab = activeTab === "all" || food.category === activeTab;
     const matchesSearch =
@@ -477,7 +470,7 @@ export default function Card() {
                         ${food.price.toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-lg text-slate-3  00 font-medium">
+                    <p className="text-lg text-slate-300 font-medium">
                       {food.nameEn}
                     </p>
                   </div>

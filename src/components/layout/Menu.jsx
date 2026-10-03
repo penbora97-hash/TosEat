@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IoIosSearch } from "react-icons/io";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ central axios instance
 
 const Menu = () => {
   const location = useLocation();
@@ -22,11 +22,9 @@ const Menu = () => {
     { id: "KHMER", label: "Khmer", emoji: "🇰🇭" },
     { id: "KOREA", label: "Korean", emoji: "🇰🇷" },
     { id: "JAPAN", label: "Japanese", emoji: "🇯🇵" },
-    { id: "AMERICAN", label:"American",emoji: "🇺🇸" },
+    { id: "AMERICAN", label: "American", emoji: "🇺🇸" },
     { id: "DRINK", label: "Drinks", emoji: "🥤" },
   ]);
-
-  const getToken = () => localStorage.getItem("token");
 
   // Check URL for product ID
   useEffect(() => {
@@ -59,7 +57,9 @@ const Menu = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:8000/api/products");
+      // ✅ Use api instance, relative path
+      const response = await api.get("/products");
+
       console.log("Products Response:", response.data);
 
       if (response.data.status === "success") {
@@ -106,9 +106,8 @@ const Menu = () => {
 
   // ✅ Add to Cart using API
   const handleAddToCart = async (item) => {
-    const token = getToken();
+    const token = localStorage.getItem("token");
     if (!token) {
-      // ✅ Show login modal instead of alert
       showLoginModal();
       return;
     }
@@ -120,19 +119,11 @@ const Menu = () => {
     }
 
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/cart",
-        {
-          product_id: item.id,
-          quantity: 1,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ Use api instance, relative path, no headers
+      const response = await api.post("/cart", {
+        product_id: item.id,
+        quantity: 1,
+      });
 
       console.log("Add to Cart Response:", response.data);
 

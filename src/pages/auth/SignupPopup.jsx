@@ -5,7 +5,7 @@ import {
   AiOutlineEye,
   AiOutlineEyeInvisible,
 } from "react-icons/ai";
-import axios from "axios";
+import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 
 function SignupPopup({ onSwitchToLogin }) {
@@ -93,7 +93,7 @@ function SignupPopup({ onSwitchToLogin }) {
 
     try {
       // ✅ Call Register API
-      const response = await axios.post("http://localhost:8000/api/register", {
+      const response = await api.post("/register", {
         full_name: formData.full_name,
         email: formData.email,
         phone: formData.phone,

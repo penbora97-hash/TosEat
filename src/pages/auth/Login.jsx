@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FiMail, FiLock, FiEye, FiEyeOff, FiLoader, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios";
 
 const Login = ({ isOpen, onClose, onSwitchToRegister }) => {
   const navigate = useNavigate();
@@ -66,7 +66,7 @@ const Login = ({ isOpen, onClose, onSwitchToRegister }) => {
     setErrors({});
 
     try {
-      const response = await axios.post("http://localhost:8000/api/login", {
+      const response = await api.post("/login", {
         email: formData.email,
         password: formData.password,
       });
