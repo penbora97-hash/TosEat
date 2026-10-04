@@ -67,7 +67,9 @@ export default function Profile() {
     setModal({ isOpen: false, type: "", title: "", message: "" });
   };
 
+  // ============================================================
   // Load profile from localStorage
+  // ============================================================
   useEffect(() => {
     const loadLocalData = () => {
       const savedProfile = localStorage.getItem("userProfile");
@@ -105,7 +107,9 @@ export default function Profile() {
     loadLocalData();
   }, []);
 
+  // ============================================================
   // Fetch profile from API
+  // ============================================================
   useEffect(() => {
     const token = getToken();
     if (!token) {
@@ -149,7 +153,9 @@ export default function Profile() {
     fetchProfile();
   }, [navigate]);
 
-  // Fetch Order History
+  // ============================================================
+  // Fetch Orders
+  // ============================================================
   const fetchOrders = async () => {
     const token = getToken();
     if (!token) return;
@@ -205,22 +211,38 @@ export default function Profile() {
     }
   }, [openSection]);
 
+  // ============================================================
+  // ✅ Get Avatar URL — with debug logs
+  // ============================================================
   const getAvatarUrl = () => {
     const avatar = editing ? form.avatar_url : profile.avatar_url;
+
+    console.log("🖼️ getAvatarUrl called:", {
+      editing,
+      formAvatar: form.avatar_url,
+      profileAvatar: profile.avatar_url,
+      chosen: avatar,
+    });
+
     if (!avatar) {
       const name = editing ? form.full_name : profile.full_name;
       if (name) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
           name,
         )}&background=10B981&color=fff&size=150`;
+        console.log("🖼️ Using fallback:", fallbackUrl);
+        return fallbackUrl;
       }
       return null;
     }
-    return getStorageUrl(avatar);
+
+    const url = getStorageUrl(avatar);
+    console.log("🖼️ getStorageUrl result:", url);
+    return url;
   };
 
   // ============================================================
-  // ✅ FIXED: handleAvatarChange — handles all backend shapes
+  // ✅ handleAvatarChange — FULLY FIXED
   // ============================================================
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
@@ -237,29 +259,20 @@ export default function Profile() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // ✅ DEBUG — មើល response ពិតប្រាកដក្នុង browser console
       console.log("🔍 Avatar response:", response.data);
       console.log("🔍 response.data.data:", response.data.data);
-      console.log("🔍 response.data.user:", response.data.user);
-      console.log("🔍 response.data.avatar_url:", response.data.avatar_url);
 
       if (response.data.status === "success") {
-        // ✅ Try EVERY possible location for avatar URL
         const data = response.data.data || {};
         const user = data.user || {};
 
+        // ✅ Try every possible location
         let avatarUrl =
-          // Inside data.user
           user.avatar_url ||
-          user.avatar ||
-          user.url ||
-          user.path ||
-          // Inside data
           data.avatar_url ||
           data.avatar ||
           data.url ||
           data.path ||
-          // Top level
           response.data.avatar_url ||
           response.data.avatar ||
           response.data.url ||
@@ -283,31 +296,33 @@ export default function Profile() {
         storagePath = storagePath.replace(/^storage\//, "");
         storagePath = storagePath.replace(/^\/+/, "");
 
-        console.log("🔍 Normalized storagePath:", storagePath);
+        console.log("✅ Normalized storagePath:", storagePath);
 
-        // ✅ Update state
-        const updatedProfile = { ...profile, avatar_url: storagePath };
-        const updatedForm = { ...form, avatar_url: storagePath };
+        // ✅ ✅ ✅ KEY FIX: use callback form to avoid stale state
+        setProfile((prev) => ({ ...prev, avatar_url: storagePath }));
+        setForm((prev) => ({ ...prev, avatar_url: storagePath }));
 
-        setProfile(updatedProfile);
-        setForm(updatedForm);
-        localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
-
-        // ✅ Update user in localStorage
+        // ✅ Update localStorage
         try {
-          const userData = JSON.parse(localStorage.getItem("user") || "{}");
-          userData.avatar_url = storagePath;
-          localStorage.setItem("user", JSON.stringify(userData));
+          const existingProfile = JSON.parse(
+            localStorage.getItem("userProfile") || "{}",
+          );
+          existingProfile.avatar_url = storagePath;
+          localStorage.setItem("userProfile", JSON.stringify(existingProfile));
+
+          const existingUser = JSON.parse(localStorage.getItem("user") || "{}");
+          existingUser.avatar_url = storagePath;
+          localStorage.setItem("user", JSON.stringify(existingUser));
         } catch (e) {
-          console.error("Failed to update user in localStorage:", e);
+          console.error("localStorage update failed:", e);
         }
 
-        // ✅ Notify Navbar/Sidebar to refresh
+        // ✅ Notify Navbar/Sidebar
         window.dispatchEvent(new Event("profileUpdated"));
 
         showModal("success", "Success", "Avatar updated successfully!");
 
-        // ✅ Reset file input so user can upload again
+        // ✅ Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -328,6 +343,9 @@ export default function Profile() {
     }
   };
 
+  // ============================================================
+  // Save Profile
+  // ============================================================
   const saveProfile = async () => {
     const token = getToken();
     if (!token) return;
@@ -410,6 +428,9 @@ export default function Profile() {
     navigate("/");
   };
 
+  // ============================================================
+  // Status Badge
+  // ============================================================
   const getStatusBadge = (status) => {
     const statusMap = {
       pending: {
@@ -571,10 +592,13 @@ export default function Profile() {
               >
                 {getAvatarUrl() ? (
                   <img
+                    key={profile.avatar_url || "no-avatar"}
                     src={getAvatarUrl()}
                     alt="Profile"
                     className="w-full h-full object-cover"
+                    onLoad={() => console.log("✅ Image loaded OK")}
                     onError={(e) => {
+                      console.error("❌ Image failed:", getAvatarUrl());
                       e.target.onerror = null;
                       const name = editing ? form.full_name : profile.full_name;
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
