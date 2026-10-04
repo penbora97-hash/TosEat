@@ -1,7 +1,7 @@
 // Setting.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
+import api, { getStorageUrl } from "../../api/axios"; // ✅ CHANGED: was axios
 import {
   FaUser,
   FaLock,
@@ -77,22 +77,16 @@ export default function Setting() {
 
     setLoading(true);
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/profile/avatar",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      // ✅ CHANGED: api instance + no Authorization header (interceptor adds it)
+      const response = await api.post("/profile/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       if (response.data.status === "success") {
         const avatarUrl = response.data.data.avatar_url;
         updateAvatar(avatarUrl);
         alert("Avatar updated successfully!");
-        
+
         // Update user data in localStorage
         const userData = JSON.parse(localStorage.getItem("user") || "{}");
         userData.avatar_url = avatarUrl;
@@ -128,28 +122,20 @@ export default function Setting() {
 
     try {
       // Update profile
-      const profileResponse = await axios.put(
-        "http://localhost:8000/api/profile",
-        {
-          full_name: form.full_name,
-          phone: form.phone,
-          address: form.address,
-          bio: form.bio,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // ✅ CHANGED: api instance
+      const profileResponse = await api.put("/profile", {
+        full_name: form.full_name,
+        phone: form.phone,
+        address: form.address,
+        bio: form.bio,
+      });
 
       if (profileResponse.data.status === "success") {
         const updatedUser = profileResponse.data.data;
-        
+
         // Update user context
         updateUser(updatedUser);
-        
+
         // Update localStorage
         const userData = JSON.parse(localStorage.getItem("user") || "{}");
         const newUserData = {
@@ -160,9 +146,11 @@ export default function Setting() {
           bio: updatedUser.bio,
         };
         localStorage.setItem("user", JSON.stringify(newUserData));
-        
+
         // Update userProfile
-        const profileData = JSON.parse(localStorage.getItem("userProfile") || "{}");
+        const profileData = JSON.parse(
+          localStorage.getItem("userProfile") || "{}",
+        );
         const newProfileData = {
           ...profileData,
           full_name: updatedUser.full_name,
@@ -175,20 +163,12 @@ export default function Setting() {
 
       // Change password if provided
       if (form.newPassword) {
-        const passwordResponse = await axios.post(
-          "http://localhost:8000/api/change-password",
-          {
-            current_password: form.currentPassword,
-            new_password: form.newPassword,
-            new_password_confirmation: form.newPassword_confirmation,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        // ✅ CHANGED: api instance
+        const passwordResponse = await api.post("/change-password", {
+          current_password: form.currentPassword,
+          new_password: form.newPassword,
+          new_password_confirmation: form.newPassword_confirmation,
+        });
 
         if (passwordResponse.data.status === "success") {
           alert("Password changed successfully!");
@@ -207,7 +187,6 @@ export default function Setting() {
       // Dispatch event to update navbar
       window.dispatchEvent(new Event("authChange"));
       window.dispatchEvent(new Event("loginStatusChanged"));
-
     } catch (error) {
       console.error("Error saving settings:", error);
       if (error.response?.status === 422) {
@@ -259,12 +238,13 @@ export default function Setting() {
                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-slate-800">
                   {user?.avatar_url ? (
                     <img
-                      src={user.avatar_url.startsWith('http') ? user.avatar_url : `http://localhost:8000/storage/${user.avatar_url}`}
+                      // ✅ CHANGED: use getStorageUrl helper
+                      src={getStorageUrl(user.avatar_url)}
                       alt="Profile"
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || 'User')}&background=10B981&color=fff&size=150`;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || "User")}&background=10B981&color=fff&size=150`;
                       }}
                     />
                   ) : (
@@ -360,7 +340,9 @@ export default function Setting() {
                 label="Current Password"
                 type="password"
                 value={form.currentPassword}
-                onChange={(e) => handleChange("currentPassword", e.target.value)}
+                onChange={(e) =>
+                  handleChange("currentPassword", e.target.value)
+                }
                 placeholder="Enter current password"
               />
               <Input
@@ -374,7 +356,9 @@ export default function Setting() {
                 label="Confirm New Password"
                 type="password"
                 value={form.newPassword_confirmation}
-                onChange={(e) => handleChange("newPassword_confirmation", e.target.value)}
+                onChange={(e) =>
+                  handleChange("newPassword_confirmation", e.target.value)
+                }
                 placeholder="Confirm new password"
               />
             </div>

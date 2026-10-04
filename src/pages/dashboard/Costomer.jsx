@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import {
   FaSearch,
   FaUserFriends,
   FaStar,
   FaShoppingBag,
   FaEye,
-  FaSync, // ← ប្តូរពី FaRefresh មក FaSync
+  FaSync,
 } from "react-icons/fa";
 
 export default function Costomer() {
@@ -35,10 +35,8 @@ export default function Costomer() {
     setError(null);
 
     try {
-      const response = await axios.get(
-        "http://localhost:8000/api/admin/users", // ← ឥឡូវមានហើយ
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      // ✅ CHANGED
+      const response = await api.get("/admin/users");
 
       console.log("Users API Response:", response.data);
 
@@ -124,7 +122,7 @@ export default function Costomer() {
           onClick={handleRefresh}
           className="mt-4 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-xl text-white font-medium transition flex items-center gap-2 mx-auto"
         >
-          <FaSync className="text-sm" /> {/* ← ប្តូរមក FaSync */}
+          <FaSync className="text-sm" />
           Try Again
         </button>
       </div>
@@ -144,7 +142,7 @@ export default function Costomer() {
           onClick={handleRefresh}
           className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-white transition flex items-center gap-2"
         >
-          <FaSync className="text-sm" /> {/* ← ប្តូរមក FaSync */}
+          <FaSync className="text-sm" />
           Refresh
         </button>
       </div>

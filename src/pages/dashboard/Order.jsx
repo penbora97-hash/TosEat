@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import {
   FaSearch,
   FaEye,
@@ -33,12 +33,8 @@ export default function Order() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        "http://localhost:8000/api/admin/orders",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      // ✅ CHANGED
+      const response = await api.get("/admin/orders");
       if (response.data.status === "success") {
         const ordersData = response.data.data.data || response.data.data || [];
         console.log("Orders Data:", ordersData);
@@ -53,11 +49,8 @@ export default function Order() {
 
   const updateOrderStatus = async (id, status) => {
     try {
-      await axios.put(
-        `http://localhost:8000/api/admin/orders/${id}/status`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      // ✅ CHANGED
+      await api.put(`/admin/orders/${id}/status`, { status });
       fetchOrders();
     } catch (error) {
       alert("Failed to update order status.");
@@ -123,7 +116,6 @@ export default function Order() {
 
   // ✅ Check if order was cancelled by user or admin
   const getCancelledByInfo = (order) => {
-    // If order has cancelled_by field
     if (order.cancelled_by) {
       if (order.cancelled_by === "user") {
         return {
@@ -142,7 +134,6 @@ export default function Order() {
       }
     }
 
-    // Fallback: Check if there's a cancellation note
     if (order.notes && order.notes.toLowerCase().includes("cancelled by")) {
       if (order.notes.toLowerCase().includes("customer")) {
         return {
@@ -161,7 +152,6 @@ export default function Order() {
       }
     }
 
-    // Default: Unknown
     return {
       label: "Cancelled",
       icon: <FaTimes className="text-red-400" />,
@@ -236,8 +226,7 @@ export default function Order() {
                             {getStatusIcon(order.status)}
                             {order.status}
                           </span>
-                          {/* ✅ Show who cancelled if status is cancelled */}
-                          {order.status === "cancelled" && (
+                          {order.status === "cancelled" && cancelInfo && (
                             <span
                               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${cancelInfo.className}`}
                             >
@@ -418,7 +407,6 @@ export default function Order() {
                       {getStatusIcon(order.status)}
                       {order.status}
                     </span>
-                    {/* ✅ Show who cancelled if status is cancelled */}
                     {order.status === "cancelled" && cancelInfo && (
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${cancelInfo.className}`}
@@ -431,7 +419,6 @@ export default function Order() {
                   <p className="text-sm text-slate-500 mt-1">
                     {order.order_number}
                   </p>
-                  {/* ✅ Show cancellation reason tooltip */}
                   {order.status === "cancelled" && cancelInfo && (
                     <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                       <FaInfoCircle className="text-slate-500 text-[10px]" />

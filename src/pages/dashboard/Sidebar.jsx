@@ -12,12 +12,13 @@ import {
   HiBars3,
 } from "react-icons/hi2";
 import { useUser } from "./UserContext";
+import { getStorageUrl } from "../../api/axios"; // ✅ ADDED
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const { user } = useUser();
 
-  // Debug log to check if user data updates
+  // Debug log
   useEffect(() => {
     console.log("Sidebar user data updated:", user);
   }, [user]);
@@ -55,17 +56,26 @@ export default function Sidebar() {
     },
   ];
 
-  // Get initials for avatar fallback
-  const getInitials = () => {
-    if (user?.name) {
-      const names = user.name.split(" ");
-      if (names.length >= 2) {
-        return `${names[0][0]}${names[1][0]}`.toUpperCase();
-      }
-      return user.name.substring(0, 2).toUpperCase();
-    }
-    return "AK";
+  // ✅ FIXED: use full_name (with name as fallback)
+  const getDisplayName = () => {
+    return user?.full_name || user?.name || "User";
   };
+
+  // ✅ FIXED: use full_name
+  const getInitials = () => {
+    const name = getDisplayName();
+    if (name && name !== "User") {
+      const parts = name.trim().split(" ");
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  // ✅ FIXED: use avatar_url + getStorageUrl helper
+  const avatarUrl = user?.avatar_url ? getStorageUrl(user.avatar_url) : null;
 
   return (
     <aside
@@ -116,14 +126,6 @@ export default function Sidebar() {
                     </span>
                     {isOpen && <span className="text-sm">{item.name}</span>}
                   </div>
-
-                  {item.badge && isOpen && (
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${isActive ? "bg-white text-emerald-600 font-bold" : "bg-emerald-500/10 text-emerald-400"}`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
                 </>
               )}
             </NavLink>
@@ -134,10 +136,10 @@ export default function Sidebar() {
       <div className="p-3 border-t border-slate-800 space-y-2">
         <div className="flex items-center gap-3 p-2 rounded-xl">
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-500/30 flex-shrink-0 bg-slate-800">
-            {user?.avatar ? (
+            {avatarUrl ? (
               <img
-                src={user.avatar}
-                alt={user.name || "User"}
+                src={avatarUrl}
+                alt={getDisplayName()}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.target.style.display = "none";
@@ -158,7 +160,7 @@ export default function Sidebar() {
           {isOpen && (
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-semibold truncate">
-                {user?.name || "User"}
+                {getDisplayName()}
               </span>
               <span className="text-xs text-slate-500 truncate">
                 {user?.role || "Manager"}

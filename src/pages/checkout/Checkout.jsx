@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import {
   FiTrash2,
   FiMinus,
@@ -112,9 +112,8 @@ const Checkout = () => {
     }
 
     try {
-      const response = await axios.get("http://localhost:8000/api/cart", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ CHANGED
+      const response = await api.get("/cart");
 
       if (response.data.status === "success") {
         const items = response.data.data.items || [];
@@ -159,16 +158,8 @@ const Checkout = () => {
     }
 
     try {
-      await axios.put(
-        `http://localhost:8000/api/cart/${productId}`,
-        { quantity: newQuantity },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ CHANGED
+      await api.put(`/cart/${productId}`, { quantity: newQuantity });
       await loadCartFromAPI();
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
@@ -182,9 +173,8 @@ const Checkout = () => {
     if (!token) return;
 
     try {
-      await axios.delete(`http://localhost:8000/api/cart/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ CHANGED
+      await api.delete(`/cart/${productId}`);
       await loadCartFromAPI();
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
@@ -196,7 +186,6 @@ const Checkout = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
     if (formErrors[name]) {
       setFormErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -228,7 +217,6 @@ const Checkout = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      // Scroll to first error
       const firstError = document.querySelector(".border-red-500");
       if (firstError) {
         firstError.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -263,16 +251,8 @@ const Checkout = () => {
 
       console.log("📦 Sending order:", orderData);
 
-      const response = await axios.post(
-        "http://localhost:8000/api/orders",
-        orderData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ CHANGED
+      const response = await api.post("/orders", orderData);
 
       if (response.data.status === "success") {
         setSuccess(true);

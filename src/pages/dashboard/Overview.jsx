@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import { useUser } from "./UserContext";
 
 const Overview = () => {
@@ -17,17 +17,12 @@ const Overview = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem("token");
-
   // ✅ Helper function to format price (improved)
   const formatPrice = (value) => {
-    // Handle null, undefined, empty string
     if (value === null || value === undefined || value === "") {
       return "0.00";
     }
-    // Convert to number
     const num = typeof value === "number" ? value : parseFloat(value);
-    // Check if valid number
     if (isNaN(num)) {
       return "0.00";
     }
@@ -41,21 +36,17 @@ const Overview = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      // ✅ CHANGED: use api instance, relative paths
       const [statsRes, ordersRes] = await Promise.all([
-        axios.get("http://localhost:8000/api/admin/stats", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("http://localhost:8000/api/admin/orders?limit=5", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        api.get("/admin/stats"),
+        api.get("/admin/orders?limit=5"),
       ]);
 
-      console.log("Stats API Response:", statsRes.data); // ✅ Debug: Check what API returns
+      console.log("Stats API Response:", statsRes.data);
 
       if (statsRes.data.status === "success") {
         const statsData = statsRes.data.data;
 
-        // ✅ Ensure total_revenue is a number
         setStats({
           ...statsData,
           total_revenue: parseFloat(statsData.total_revenue) || 0,
@@ -90,17 +81,15 @@ const Overview = () => {
     );
   }
 
-  // ✅ Calculate total revenue from orders if API doesn't provide it
+  // Calculate total revenue from orders if API doesn't provide it
   const calculatedRevenue = recentOrders.reduce((sum, order) => {
     const amount = parseFloat(order.total_amount) || 0;
-    // Only count confirmed orders for revenue
     if (order.status === "confirmed") {
       return sum + amount;
     }
     return sum;
   }, 0);
 
-  // Use API revenue if available, otherwise use calculated
   const displayRevenue =
     stats.total_revenue > 0 ? stats.total_revenue : calculatedRevenue;
 

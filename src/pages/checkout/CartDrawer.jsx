@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import { FiX, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 
 const CartDrawer = ({ isOpen, onClose }) => {
@@ -24,18 +24,14 @@ const CartDrawer = ({ isOpen, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:8000/api/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // ✅ CHANGED
+      const response = await api.get("/cart");
 
       console.log("Cart Response:", response.data);
 
       if (response.data.status === "success") {
         const items = response.data.data.items || [];
         setCartItems(items);
-        // ✅ Ensure total is a number
         const totalAmount = response.data.data.total || 0;
         setTotal(
           typeof totalAmount === "number"
@@ -79,7 +75,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Find the item
     const item = cartItems.find((item) => item.product_id === productId);
     if (!item) return;
 
@@ -91,16 +86,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
 
     try {
-      await axios.put(
-        `http://localhost:8000/api/cart/${productId}`,
-        { quantity: newQuantity },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      // ✅ CHANGED
+      await api.put(`/cart/${productId}`, { quantity: newQuantity });
       await loadCart();
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
@@ -118,11 +105,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
     }
 
     try {
-      await axios.delete(`http://localhost:8000/api/cart/${productId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // ✅ CHANGED
+      await api.delete(`/cart/${productId}`);
       await loadCart();
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
@@ -199,7 +183,6 @@ const CartDrawer = ({ isOpen, onClose }) => {
             </div>
           ) : (
             cartItems.map((item) => {
-              // ✅ Ensure price is a number
               const price =
                 typeof item.product?.price === "number"
                   ? item.product.price

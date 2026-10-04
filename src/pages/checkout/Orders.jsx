@@ -1,7 +1,7 @@
 // src/pages/checkout/Orders.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import {
   FiClock,
   FiCheckCircle,
@@ -92,9 +92,8 @@ export default function Orders() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:8000/api/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ CHANGED
+      const response = await api.get("/orders");
 
       console.log("Orders Response:", response.data);
 
@@ -249,16 +248,10 @@ export default function Orders() {
       cancelText: "No, Keep Order",
       onConfirm: async () => {
         try {
-          const response = await axios.patch(
-            `http://localhost:8000/api/orders/${orderId}`,
-            { status: "cancelled" },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            },
-          );
+          // ✅ CHANGED
+          const response = await api.patch(`/orders/${orderId}`, {
+            status: "cancelled",
+          });
 
           if (response.data.status === "success") {
             await fetchOrders();
@@ -513,7 +506,6 @@ function OrderCard({
   onView,
   onCancel,
 }) {
-  // Get image from items
   const getThumbnail = () => {
     if (order.items && order.items.length > 0) {
       const firstItem = order.items[0];
@@ -531,7 +523,6 @@ function OrderCard({
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-2xl p-4 hover:border-slate-600 transition">
       <div className="flex gap-4">
-        {/* Image Thumbnail */}
         <div className="hidden sm:block w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
           <img
             src={getThumbnail()}
@@ -571,7 +562,6 @@ function OrderCard({
             <span>{formatDate(order.created_at)}</span>
           </div>
 
-          {/* Item preview with images */}
           {order.items && order.items.length > 0 && (
             <div className="mt-2 flex items-center gap-2">
               <div className="flex -space-x-2">

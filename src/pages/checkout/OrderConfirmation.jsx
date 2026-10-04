@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import { FiCheckCircle, FiHome, FiShoppingBag } from "react-icons/fi";
 
 const OrderConfirmation = () => {
@@ -27,11 +27,8 @@ const OrderConfirmation = () => {
     }
 
     try {
-      const response = await axios.get("http://localhost:8000/api/orders", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // ✅ CHANGED
+      const response = await api.get("/orders");
 
       if (response.data.status === "success") {
         const orders = response.data.data.data || response.data.data || [];

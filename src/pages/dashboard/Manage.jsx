@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import {
   FaPlus,
   FaEdit,
@@ -46,7 +46,8 @@ export default function Manage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/categories");
+      // ✅ CHANGED
+      const response = await api.get("/categories");
       if (response.data.status === "success") {
         const data = response.data.data || [];
         setCategories(Array.isArray(data) ? data : []);
@@ -67,12 +68,8 @@ export default function Manage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(
-        "http://localhost:8000/api/admin/products",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      // ✅ CHANGED
+      const response = await api.get("/admin/products");
       console.log("Products Response:", response.data);
 
       if (response.data.status === "success") {
@@ -175,16 +172,12 @@ export default function Manage() {
       console.log("Sending data:", data);
 
       if (editingId) {
-        await axios.put(
-          `http://localhost:8000/api/admin/products/${editingId}`,
-          data,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        // ✅ CHANGED
+        await api.put(`/admin/products/${editingId}`, data);
         showModal("success", "Success", "Product updated successfully!");
       } else {
-        await axios.post("http://localhost:8000/api/admin/products", data, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // ✅ CHANGED
+        await api.post("/admin/products", data);
         showModal("success", "Success", "Product added successfully!");
       }
       resetForm();
@@ -233,9 +226,8 @@ export default function Manage() {
         }
 
         try {
-          await axios.delete(`http://localhost:8000/api/admin/products/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          // ✅ CHANGED
+          await api.delete(`/admin/products/${id}`);
           showModal("success", "Success", "Product deleted successfully!");
           fetchProducts();
           if (editingId === id) resetForm();
@@ -430,7 +422,7 @@ export default function Manage() {
               )}
             </div>
 
-            {/* ✅ Price - changed to text input */}
+            {/* Price */}
             <div>
               <label className="block text-sm text-slate-400 mb-2">
                 Price <span className="text-red-400">*</span>
@@ -445,7 +437,7 @@ export default function Manage() {
               />
             </div>
 
-            {/* ✅ Stock - changed to text input */}
+            {/* Stock */}
             <div>
               <label className="block text-sm text-slate-400 mb-2">Stock</label>
               <input

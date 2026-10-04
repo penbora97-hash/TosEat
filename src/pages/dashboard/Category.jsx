@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../api/axios"; // ✅ CHANGED: was axios
 import { FaPlus, FaEdit, FaTrash, FaSync, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
 
 // Modal Component
@@ -158,12 +158,8 @@ const Category = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(
-        "http://localhost:8000/api/admin/categories",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      // ✅ CHANGED
+      const response = await api.get("/admin/categories");
       console.log("Categories Response:", response.data);
 
       if (response.data.status === "success") {
@@ -225,22 +221,16 @@ const Category = () => {
       };
 
       if (isEditing) {
-        await axios.put(
-          `http://localhost:8000/api/admin/categories/${editingId}`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        // ✅ CHANGED
+        await api.put(`/admin/categories/${editingId}`, payload);
         showModal({
           title: "Success!",
           message: "Category updated successfully!",
           type: "success",
         });
       } else {
-        await axios.post(
-          "http://localhost:8000/api/admin/categories",
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        // ✅ CHANGED
+        await api.post("/admin/categories", payload);
         showModal({
           title: "Success!",
           message: "Category added successfully!",
@@ -309,9 +299,8 @@ const Category = () => {
         }
 
         try {
-          await axios.delete(`http://localhost:8000/api/admin/categories/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          // ✅ CHANGED
+          await api.delete(`/admin/categories/${id}`);
           showModal({
             title: "Success!",
             message: "Category deleted successfully!",
@@ -350,11 +339,10 @@ const Category = () => {
     }
 
     try {
-      await axios.patch(
-        `http://localhost:8000/api/admin/categories/${id}/status`,
-        { is_active: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      // ✅ CHANGED
+      await api.patch(`/admin/categories/${id}/status`, {
+        is_active: !currentStatus,
+      });
       fetchCategories();
       showModal({
         title: "Success!",
