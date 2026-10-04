@@ -50,6 +50,9 @@ export default function Profile() {
     cancelled: 0,
   });
 
+  // ✅ KEY FIX: avatarUrl state ដោយផ្ទាល់ (មិនមែន compute)
+  const [avatarUrl, setAvatarUrl] = useState(null);
+
   const [modal, setModal] = useState({
     isOpen: false,
     type: "",
@@ -66,6 +69,44 @@ export default function Profile() {
   const closeModal = () => {
     setModal({ isOpen: false, type: "", title: "", message: "" });
   };
+
+  // ============================================================
+  // ✅ Avatar URL updater — runs whenever profile/form changes
+  // ============================================================
+  useEffect(() => {
+    const avatar = editing ? form.avatar_url : profile.avatar_url;
+
+    console.log("🔄 Avatar effect running:", {
+      editing,
+      formAvatar: form.avatar_url,
+      profileAvatar: profile.avatar_url,
+      chosen: avatar,
+    });
+
+    if (!avatar) {
+      const name = editing ? form.full_name : profile.full_name;
+      if (name) {
+        const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          name,
+        )}&background=10B981&color=fff&size=150`;
+        console.log("🖼️ Using fallback:", fallback);
+        setAvatarUrl(fallback);
+      } else {
+        setAvatarUrl(null);
+      }
+      return;
+    }
+
+    const url = getStorageUrl(avatar);
+    console.log("✅ Avatar URL set:", url);
+    setAvatarUrl(url);
+  }, [
+    profile.avatar_url,
+    form.avatar_url,
+    editing,
+    profile.full_name,
+    form.full_name,
+  ]);
 
   // ============================================================
   // Load profile from localStorage
@@ -212,37 +253,7 @@ export default function Profile() {
   }, [openSection]);
 
   // ============================================================
-  // ✅ Get Avatar URL — with debug logs
-  // ============================================================
-  const getAvatarUrl = () => {
-    const avatar = editing ? form.avatar_url : profile.avatar_url;
-
-    console.log("🖼️ getAvatarUrl called:", {
-      editing,
-      formAvatar: form.avatar_url,
-      profileAvatar: profile.avatar_url,
-      chosen: avatar,
-    });
-
-    if (!avatar) {
-      const name = editing ? form.full_name : profile.full_name;
-      if (name) {
-        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          name,
-        )}&background=10B981&color=fff&size=150`;
-        console.log("🖼️ Using fallback:", fallbackUrl);
-        return fallbackUrl;
-      }
-      return null;
-    }
-
-    const url = getStorageUrl(avatar);
-    console.log("🖼️ getStorageUrl result:", url);
-    return url;
-  };
-
-  // ============================================================
-  // ✅ handleAvatarChange — FULLY FIXED
+  // handleAvatarChange — FULLY FIXED
   // ============================================================
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
@@ -260,14 +271,12 @@ export default function Profile() {
       });
 
       console.log("🔍 Avatar response:", response.data);
-      console.log("🔍 response.data.data:", response.data.data);
 
       if (response.data.status === "success") {
         const data = response.data.data || {};
         const user = data.user || {};
 
-        // ✅ Try every possible location
-        let avatarUrl =
+        let avatarUrlRaw =
           user.avatar_url ||
           data.avatar_url ||
           data.avatar ||
@@ -278,19 +287,19 @@ export default function Profile() {
           response.data.url ||
           response.data.path;
 
-        console.log("🔍 Extracted avatarUrl:", avatarUrl);
+        console.log("🔍 Extracted avatarUrl:", avatarUrlRaw);
 
-        if (!avatarUrl) {
+        if (!avatarUrlRaw) {
           showModal(
             "error",
             "Upload Failed",
-            "Backend មិន return URL របស់រូប។ សូមពិនិត្យ backend response ក្នុង Console (F12)។",
+            "Backend មិន return URL របស់រូប។",
           );
           return;
         }
 
-        // ✅ Normalize to storage-relative path
-        let storagePath = avatarUrl;
+        // ✅ Normalize
+        let storagePath = avatarUrlRaw;
         storagePath = storagePath.replace(/^https?:\/\/[^/]+\/storage\//, "");
         storagePath = storagePath.replace(/^\/storage\//, "");
         storagePath = storagePath.replace(/^storage\//, "");
@@ -298,9 +307,12 @@ export default function Profile() {
 
         console.log("✅ Normalized storagePath:", storagePath);
 
-        // ✅ ✅ ✅ KEY FIX: use callback form to avoid stale state
+        // ✅ Update state with functional updates
         setProfile((prev) => ({ ...prev, avatar_url: storagePath }));
         setForm((prev) => ({ ...prev, avatar_url: storagePath }));
+
+        // ✅ ✅ ✅ IMMEDIATELY update avatarUrl state — no waiting
+        setAvatarUrl(getStorageUrl(storagePath));
 
         // ✅ Update localStorage
         try {
@@ -317,12 +329,10 @@ export default function Profile() {
           console.error("localStorage update failed:", e);
         }
 
-        // ✅ Notify Navbar/Sidebar
         window.dispatchEvent(new Event("profileUpdated"));
 
         showModal("success", "Success", "Avatar updated successfully!");
 
-        // ✅ Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -428,9 +438,6 @@ export default function Profile() {
     navigate("/");
   };
 
-  // ============================================================
-  // Status Badge
-  // ============================================================
   const getStatusBadge = (status) => {
     const statusMap = {
       pending: {
@@ -590,15 +597,16 @@ export default function Profile() {
                 } overflow-hidden bg-slate-900 flex items-center justify-center transition-all`}
                 onClick={triggerFileSelect}
               >
-                {getAvatarUrl() ? (
+                {/* ✅ KEY FIX: use avatarUrl state directly */}
+                {avatarUrl ? (
                   <img
-                    key={profile.avatar_url || "no-avatar"}
-                    src={getAvatarUrl()}
+                    key={avatarUrl}
+                    src={avatarUrl}
                     alt="Profile"
                     className="w-full h-full object-cover"
-                    onLoad={() => console.log("✅ Image loaded OK")}
+                    onLoad={() => console.log("✅ Image loaded OK:", avatarUrl)}
                     onError={(e) => {
-                      console.error("❌ Image failed:", getAvatarUrl());
+                      console.error("❌ Image failed:", avatarUrl);
                       e.target.onerror = null;
                       const name = editing ? form.full_name : profile.full_name;
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
