@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api, { getStorageUrl } from "../../api/axios"; // ✅ central axios
+import api, { getStorageUrl } from "../../api/axios";
 import {
   FaUserEdit,
   FaSignOutAlt,
@@ -50,7 +50,6 @@ export default function Profile() {
     cancelled: 0,
   });
 
-  // Modal states
   const [modal, setModal] = useState({
     isOpen: false,
     type: "",
@@ -116,7 +115,6 @@ export default function Profile() {
 
     const fetchProfile = async () => {
       try {
-        // ✅ FIXED: api instance, no headers, no localhost
         const response = await api.get("/user");
 
         if (response.data.status === "success") {
@@ -151,14 +149,13 @@ export default function Profile() {
     fetchProfile();
   }, [navigate]);
 
-  // ✅ Fetch Order History
+  // Fetch Order History
   const fetchOrders = async () => {
     const token = getToken();
     if (!token) return;
 
     setOrdersLoading(true);
     try {
-      // ✅ FIXED: api instance
       const response = await api.get("/orders");
 
       if (response.data.status === "success") {
@@ -168,9 +165,7 @@ export default function Profile() {
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
-      // Fallback to admin orders if user orders not available
       try {
-        // ✅ FIXED: api instance
         const response2 = await api.get("/admin/orders");
         if (response2.data.status === "success") {
           const allOrders =
@@ -204,7 +199,6 @@ export default function Profile() {
     });
   };
 
-  // Fetch orders when section opens
   useEffect(() => {
     if (openSection === "orders") {
       fetchOrders();
@@ -222,10 +216,12 @@ export default function Profile() {
       }
       return null;
     }
-    // ✅ FIXED: use getStorageUrl helper
     return getStorageUrl(avatar);
   };
 
+  // ============================================================
+  // ✅ FIXED: handleAvatarChange — handles all backend shapes
+  // ============================================================
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -237,28 +233,59 @@ export default function Profile() {
     formData.append("avatar", file);
 
     try {
-      // ✅ FIXED: api instance, no Authorization header (interceptor adds it)
       const response = await api.post("/profile/avatar", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (response.data.status === "success") {
-        let avatarUrl =
-          response.data.data.avatar_url ||
-          response.data.data.avatar ||
-          response.data.data.url ||
-          response.data.data.path;
+      // ✅ DEBUG — មើល response ពិតប្រាកដក្នុង browser console
+      console.log("🔍 Avatar response:", response.data);
+      console.log("🔍 response.data.data:", response.data.data);
+      console.log("🔍 response.data.user:", response.data.user);
+      console.log("🔍 response.data.avatar_url:", response.data.avatar_url);
 
-        let storagePath = avatarUrl;
-        if (storagePath) {
-          storagePath = storagePath.replace(
-            /^https?:\/\/[^\/]+\/storage\//,
-            "",
+      if (response.data.status === "success") {
+        // ✅ Try EVERY possible location for avatar URL
+        const data = response.data.data || {};
+        const user = data.user || {};
+
+        let avatarUrl =
+          // Inside data.user
+          user.avatar_url ||
+          user.avatar ||
+          user.url ||
+          user.path ||
+          // Inside data
+          data.avatar_url ||
+          data.avatar ||
+          data.url ||
+          data.path ||
+          // Top level
+          response.data.avatar_url ||
+          response.data.avatar ||
+          response.data.url ||
+          response.data.path;
+
+        console.log("🔍 Extracted avatarUrl:", avatarUrl);
+
+        if (!avatarUrl) {
+          showModal(
+            "error",
+            "Upload Failed",
+            "Backend មិន return URL របស់រូប។ សូមពិនិត្យ backend response ក្នុង Console (F12)។",
           );
-          storagePath = storagePath.replace(/^\/storage\//, "");
-          storagePath = storagePath.replace(/^storage\//, "");
+          return;
         }
 
+        // ✅ Normalize to storage-relative path
+        let storagePath = avatarUrl;
+        storagePath = storagePath.replace(/^https?:\/\/[^/]+\/storage\//, "");
+        storagePath = storagePath.replace(/^\/storage\//, "");
+        storagePath = storagePath.replace(/^storage\//, "");
+        storagePath = storagePath.replace(/^\/+/, "");
+
+        console.log("🔍 Normalized storagePath:", storagePath);
+
+        // ✅ Update state
         const updatedProfile = { ...profile, avatar_url: storagePath };
         const updatedForm = { ...form, avatar_url: storagePath };
 
@@ -266,20 +293,38 @@ export default function Profile() {
         setForm(updatedForm);
         localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
 
-        const userData = localStorage.getItem("user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          user.avatar_url = storagePath;
-          localStorage.setItem("user", JSON.stringify(user));
+        // ✅ Update user in localStorage
+        try {
+          const userData = JSON.parse(localStorage.getItem("user") || "{}");
+          userData.avatar_url = storagePath;
+          localStorage.setItem("user", JSON.stringify(userData));
+        } catch (e) {
+          console.error("Failed to update user in localStorage:", e);
         }
 
+        // ✅ Notify Navbar/Sidebar to refresh
         window.dispatchEvent(new Event("profileUpdated"));
 
         showModal("success", "Success", "Avatar updated successfully!");
+
+        // ✅ Reset file input so user can upload again
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } else {
+        showModal(
+          "error",
+          "Upload Failed",
+          response.data.message || "Failed to upload avatar.",
+        );
       }
     } catch (error) {
       console.error("Error uploading avatar:", error);
-      showModal("error", "Error", "Failed to update avatar. Please try again.");
+      showModal(
+        "error",
+        "Upload Failed",
+        error.response?.data?.message || "Failed to update avatar.",
+      );
     }
   };
 
@@ -289,7 +334,6 @@ export default function Profile() {
 
     setSaving(true);
     try {
-      // ✅ FIXED: api instance, no headers
       const response = await api.put("/profile", {
         full_name: form.full_name,
         phone: form.phone,
@@ -366,7 +410,6 @@ export default function Profile() {
     navigate("/");
   };
 
-  // ✅ Get Status Badge
   const getStatusBadge = (status) => {
     const statusMap = {
       pending: {
@@ -432,7 +475,6 @@ export default function Profile() {
     return isNaN(numAmount) ? "0.00" : numAmount.toFixed(2);
   };
 
-  // Calculate totals
   const totalOrders = orders.length;
   const totalSpent = orders
     .filter((o) => o.status === "delivered" || o.status === "confirmed")
@@ -498,7 +540,6 @@ export default function Profile() {
       )}
 
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="flex items-start justify-between gap-4 flex-col md:flex-row md:items-end mb-6">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold">My Profile</h1>
@@ -519,7 +560,6 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Sidebar */}
           <div className="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-3xl p-6 space-y-6">
-            {/* Avatar */}
             <div className="flex flex-col items-center text-center">
               <div
                 className={`relative group w-28 h-28 rounded-full border-4 ${
@@ -583,7 +623,6 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-800">
               <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 text-center">
                 <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
@@ -601,7 +640,6 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Quick Links */}
             <div className="pt-4 border-t border-slate-800 space-y-2">
               <button
                 onClick={() => navigate("/orders")}
@@ -618,7 +656,6 @@ export default function Profile() {
 
           {/* Main Content */}
           <div className="lg:col-span-9 space-y-4">
-            {/* User Information */}
             <div className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
               <button
                 onClick={() =>
@@ -733,7 +770,6 @@ export default function Profile() {
               )}
             </div>
 
-            {/* ✅ Order History */}
             <div className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
               <button
                 onClick={() =>
@@ -857,7 +893,6 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Logout */}
             <div className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
               <button
                 onClick={() =>
